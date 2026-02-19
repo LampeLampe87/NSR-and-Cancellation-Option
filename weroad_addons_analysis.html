@@ -1,0 +1,857 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>WeRoad — Add-Ons: Cancellation Option & NoSharing</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:#0d0f14;--surface:#13161e;--surface2:#1a1e28;--border:#252a38;
+  --accent:#ff6b35;--accent2:#00d4aa;--accent3:#7b68ee;
+  --text:#e8eaf0;--muted:#6b7490;--pos:#00d4aa;--neg:#ff4560;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'DM Mono',monospace;background:var(--bg);color:var(--text);min-height:100vh;}
+body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(255,107,53,.025) 1px,transparent 1px),linear-gradient(90deg,rgba(255,107,53,.025) 1px,transparent 1px);background-size:48px 48px;pointer-events:none;z-index:0;}
+.wrap{position:relative;z-index:1;max-width:1400px;margin:0 auto;padding:26px 22px;}
+header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:24px;padding-bottom:18px;border-bottom:1px solid var(--border);}
+.logo h1{font-family:'Syne',sans-serif;font-size:24px;font-weight:800;}
+.logo h1 span{color:var(--accent);}
+.logo .sub{font-size:10px;color:var(--muted);margin-top:3px;letter-spacing:2px;text-transform:uppercase;}
+.hmeta{text-align:right;font-size:10px;color:var(--muted);}
+.hmeta .hi{color:var(--accent);margin-top:3px;}
+/* tabs */
+.tabs{display:flex;border-bottom:1px solid var(--border);margin-bottom:20px;}
+.tab{padding:9px 20px;font-family:'DM Mono',monospace;font-size:10px;letter-spacing:1px;text-transform:uppercase;cursor:pointer;color:var(--muted);border:none;background:none;border-bottom:2px solid transparent;margin-bottom:-1px;transition:all .15s;}
+.tab.on{color:var(--accent);border-bottom-color:var(--accent);}
+.pane{display:none;}.pane.on{display:block;}
+/* filters */
+.filters{display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap;}
+.pg{display:flex;gap:3px;background:var(--surface);padding:3px;border-radius:8px;}
+.p{padding:5px 12px;border-radius:5px;border:none;background:transparent;color:var(--muted);font-family:'DM Mono',monospace;font-size:10px;cursor:pointer;transition:all .15s;}
+.p:hover{color:var(--text);}
+.p.on{background:var(--accent);color:#fff;}
+/* kpi row */
+.krow{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:20px;}
+.kpi{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:15px;position:relative;overflow:hidden;}
+.kpi::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;}
+.kpi.ora::before{background:var(--accent);}
+.kpi.grn::before{background:var(--pos);}
+.kpi.pur::before{background:var(--accent3);}
+.kpi .lbl{font-size:9px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;margin-bottom:6px;}
+.kpi .val{font-family:'Syne',sans-serif;font-size:21px;font-weight:700;}
+.kpi .sub{font-size:10px;color:var(--muted);margin-top:4px;}
+.kpi .yoy{font-size:10px;margin-top:3px;}
+/* cards */
+.grid{display:grid;gap:14px;margin-bottom:14px;}
+.g2{grid-template-columns:1fr 1fr;}
+.g3{grid-template-columns:1fr 1fr 1fr;}
+.full{grid-column:1/-1;}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:18px;}
+.card-hdr{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;}
+.card-ttl{font-family:'Syne',sans-serif;font-size:11px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;}
+.badge{font-size:10px;color:var(--muted);background:var(--surface2);padding:2px 7px;border-radius:4px;}
+.leg{display:flex;gap:12px;flex-wrap:wrap;}
+.li{display:flex;align-items:center;gap:5px;font-size:10px;color:var(--muted);}
+.ld{width:8px;height:8px;border-radius:2px;flex-shrink:0;}
+/* alert boxes */
+.abox{border-radius:7px;padding:10px 14px;font-size:11px;line-height:1.7;margin-bottom:16px;}
+.abox.warn{background:rgba(255,107,53,.07);border:1px solid rgba(255,107,53,.25);color:var(--accent);}
+.abox.info{background:rgba(0,212,170,.07);border:1px solid rgba(0,212,170,.25);color:var(--pos);}
+/* heatmap */
+.hm-scroll{overflow-x:auto;}
+.hm-wrap{display:inline-block;min-width:100%;}
+.hm-row{display:grid;align-items:center;gap:3px;margin-bottom:3px;}
+.hm-lbl{font-size:10px;color:var(--muted);padding-right:6px;white-space:nowrap;}
+.hm-hdr{font-size:9px;color:var(--muted);text-align:center;}
+.cell{height:28px;border-radius:3px;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:500;cursor:default;transition:transform .1s;}
+.cell:hover{transform:scale(1.08);z-index:10;position:relative;}
+.c0{background:#13161e;color:#3a3f52;}
+.c1{background:rgba(123,104,238,.25);color:#9b88f0;}
+.c2{background:rgba(255,107,53,.25);color:#ff9060;}
+.c3{background:rgba(255,107,53,.5);color:#ff6b35;}
+.c4{background:rgba(255,107,53,.85);color:#fff;}
+.cg1{background:rgba(0,212,170,.2);color:#00d4aa;}
+.cg2{background:rgba(0,212,170,.4);color:#00c49a;}
+.cg3{background:rgba(0,212,170,.7);color:#fff;}
+/* table */
+.dt{width:100%;border-collapse:collapse;font-size:11px;}
+.dt th{text-align:left;padding:5px 9px;font-size:9px;color:var(--muted);letter-spacing:1.5px;text-transform:uppercase;border-bottom:1px solid var(--border);}
+.dt td{padding:6px 9px;border-bottom:1px solid rgba(255,255,255,.03);}
+.dt tr:hover td{background:rgba(255,107,53,.04);}
+.dt .r{text-align:right;}
+/* inline bar */
+.ibw{display:flex;align-items:center;gap:5px;}
+.ib{height:5px;border-radius:3px;background:var(--border);flex:1;}
+.ibf{height:100%;border-radius:3px;}
+.pc{font-size:10px;min-width:36px;text-align:right;}
+/* section title */
+.stitle{font-family:'Syne',sans-serif;font-size:12px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text);margin:22px 0 12px;padding-bottom:7px;border-bottom:1px solid var(--border);}
+.up{color:var(--pos);}.dn{color:var(--neg);}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <div class="logo">
+    <h1>We<span>Road</span></h1>
+    <div class="sub">Add-Ons Analysis · Cancellation Option & NoSharing</div>
+  </div>
+  <div class="hmeta">
+    <div>Booking window: Jan 2025 → 18 Feb 2026</div>
+    <div>Supply window: departures Jan 2025 → Dec 2026</div>
+    <div class="hi">Source: BigQuery production · OPEN bookings only</div>
+  </div>
+</header>
+
+<div class="tabs">
+  <button class="tab on" onclick="tab('canc',this)">Cancellation Option Take-Rate</button>
+  <button class="tab" onclick="tab('ns',this)">NoSharing Tour Offering</button>
+  <button class="tab" onclick="tab('supply',this)">Tour Supply 2025 vs 2026</button>
+</div>
+
+<!-- FILTERS (shared) -->
+<div class="filters">
+  <div class="pg" id="fg-mkt">
+    <button class="p on" onclick="flt('mkt','ALL',this)">All Markets</button>
+    <button class="p" onclick="flt('mkt','IT',this)">IT</button>
+    <button class="p" onclick="flt('mkt','DE',this)">DE</button>
+    <button class="p" onclick="flt('mkt','ES',this)">ES</button>
+    <button class="p" onclick="flt('mkt','FR',this)">FR</button>
+    <button class="p" onclick="flt('mkt','WE',this)">WE</button>
+  </div>
+  <div class="pg" id="fg-cc">
+    <button class="p on" onclick="flt('cc','ALL',this)">Both CC</button>
+    <button class="p" onclick="flt('cc','WeRoad',this)">WeRoad</button>
+    <button class="p" onclick="flt('cc','WeRoadX',this)">WeRoadX</button>
+  </div>
+</div>
+
+<!-- ===== PANE 1: CANCELLATION OPTION ===== -->
+<div class="pane on" id="pane-canc">
+  <div class="abox warn" id="canc-alert"></div>
+  <div class="krow" id="canc-kpis"></div>
+
+  <div class="stitle">Monthly Take-Rate Heatmap — % of PAX purchasing cancellation option</div>
+  <div class="card" style="margin-bottom:14px">
+    <div class="card-hdr">
+      <span class="card-ttl">By Market × Cost Center × Booking Month</span>
+      <div class="leg">
+        <div class="li"><div class="ld c1"></div>&lt;5%</div>
+        <div class="li"><div class="ld c2"></div>5–10%</div>
+        <div class="li"><div class="ld c3"></div>10–15%</div>
+        <div class="li"><div class="ld c4"></div>&gt;15%</div>
+        <div class="li"><div class="ld c0"></div>0% / no data</div>
+      </div>
+    </div>
+    <div id="canc-hm"></div>
+  </div>
+
+  <div class="stitle">YoY Comparison — Jan–Feb 2025 vs Jan–Feb 2026</div>
+  <div class="grid g2">
+    <div class="card">
+      <div class="card-hdr"><span class="card-ttl">Jan–Feb 2025</span></div>
+      <div id="canc-t25"></div>
+    </div>
+    <div class="card">
+      <div class="card-hdr"><span class="card-ttl">Jan–Feb 2026</span><span class="badge">YTD</span></div>
+      <div id="canc-t26"></div>
+    </div>
+  </div>
+
+  <div class="stitle">Full Year 2025 — Take-Rate by Market & Cost Center</div>
+  <div class="card">
+    <div class="card-hdr">
+      <span class="card-ttl">Jan–Dec 2025 Aggregated</span>
+      <div class="leg">
+        <div class="li"><div class="ld" style="background:var(--accent)"></div>WeRoad</div>
+        <div class="li"><div class="ld" style="background:var(--accent2)"></div>WeRoadX</div>
+      </div>
+    </div>
+    <div id="canc-t25full"></div>
+  </div>
+
+  <div class="stitle">Monthly Trend — WeRoad vs WeRoadX Take-Rate</div>
+  <div class="card">
+    <div class="card-hdr">
+      <span class="card-ttl">% of PAX buying cancellation option per booking month</span>
+      <div class="leg">
+        <div class="li"><div class="ld" style="background:var(--accent)"></div>WeRoad</div>
+        <div class="li"><div class="ld" style="background:var(--accent2)"></div>WeRoadX</div>
+        <div class="li"><div class="ld" style="background:var(--accent3)"></div>Combined</div>
+      </div>
+    </div>
+    <div id="canc-trend"></div>
+  </div>
+</div>
+
+<!-- ===== PANE 2: NOSHARING ===== -->
+<div class="pane" id="pane-ns">
+  <div class="abox info" id="ns-alert"></div>
+  <div class="krow" id="ns-kpis"></div>
+
+  <div class="stitle">NoSharing Offer Rate by Departure Month — % of Tours Offering Single Room</div>
+  <div class="card" style="margin-bottom:14px">
+    <div class="card-hdr">
+      <span class="card-ttl">By Market × Cost Center × Departure Month</span>
+      <div class="leg">
+        <div class="li"><div class="ld c0"></div>0%</div>
+        <div class="li"><div class="ld cg1"></div>1–15%</div>
+        <div class="li"><div class="ld cg2"></div>15–30%</div>
+        <div class="li"><div class="ld cg3"></div>&gt;30%</div>
+      </div>
+    </div>
+    <div id="ns-hm-25"></div>
+  </div>
+
+  <div class="stitle">2025 vs 2026 Comparison by Market & Cost Center</div>
+  <div class="grid g2">
+    <div class="card">
+      <div class="card-hdr"><span class="card-ttl">2025 — NoSharing Offering Rate</span></div>
+      <div id="ns-t25"></div>
+    </div>
+    <div class="card">
+      <div class="card-hdr"><span class="card-ttl">2026 — NoSharing Offering Rate</span><span class="badge">all departures planned</span></div>
+      <div id="ns-t26"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== PANE 3: SUPPLY ===== -->
+<div class="pane" id="pane-supply">
+  <div class="abox info">Tour supply = active, non-mockup departure instances. Cancellation option: 100% of tours have priceCnc > 0 in both years — it is available on all tours. NoSharing availability is per tour, measured as: tour has at least one booking where priceNoSharing > 0. Future 2026 departures may show lower rates as bookings are not yet accrued.</div>
+
+  <div class="krow" id="sup-kpis"></div>
+
+  <div class="stitle">Tour Supply Growth by Departure Month</div>
+  <div class="grid g2">
+    <div class="card">
+      <div class="card-hdr">
+        <span class="card-ttl">Total Active Tours — 2025 vs 2026</span>
+        <div class="leg"><div class="li"><div class="ld" style="background:#555"></div>2025</div><div class="li"><div class="ld" style="background:var(--accent)"></div>2026</div></div>
+      </div>
+      <div id="sup-bar-tours"></div>
+    </div>
+    <div class="card">
+      <div class="card-hdr">
+        <span class="card-ttl">NoSharing Offer Rate — 2025 vs 2026</span>
+        <div class="leg"><div class="li"><div class="ld" style="background:#555"></div>2025</div><div class="li"><div class="ld" style="background:var(--accent2)"></div>2026</div></div>
+      </div>
+      <div id="sup-bar-ns"></div>
+    </div>
+  </div>
+
+  <div class="stitle">Detail Table — Supply by Market, Cost Center & Year</div>
+  <div class="card">
+    <div id="sup-table"></div>
+  </div>
+</div>
+
+</div><!-- /wrap -->
+
+<script>
+// ============================================================
+// DATA — straight from BigQuery
+// ============================================================
+// BOOKINGS: [month, market, cc, bookings, pax, canc_pax, bkgs_with_canc, canc_rev]
+const BK = [
+["2025-01","DE","WeRoad",769,820,78,75,7165],
+["2025-01","DE","WeRoadX",21,22,0,0,0],
+["2025-01","ES","WeRoad",521,580,51,47,4253],
+["2025-01","ES","WeRoadX",94,97,0,0,0],
+["2025-01","FR","WeRoad",395,416,64,62,5918],
+["2025-01","FR","WeRoadX",32,34,0,0,0],
+["2025-01","IT","WeRoad",3391,4028,484,432,40118],
+["2025-01","IT","WeRoadX",2280,2592,3,3,297],
+["2025-01","WE","WeRoad",415,444,52,50,5111],
+["2025-01","WE","WeRoadX",12,13,0,0,0],
+["2025-02","DE","WeRoad",293,305,43,43,4097],
+["2025-02","DE","WeRoadX",8,8,0,0,0],
+["2025-02","ES","WeRoad",299,335,22,20,1920],
+["2025-02","ES","WeRoadX",102,104,0,0,0],
+["2025-02","FR","WeRoad",196,210,26,24,2236],
+["2025-02","FR","WeRoadX",19,19,0,0,0],
+["2025-02","IT","WeRoad",1850,2158,334,300,26655],
+["2025-02","IT","WeRoadX",1830,2056,8,8,712],
+["2025-02","WE","WeRoad",215,228,22,20,1863],
+["2025-02","WE","WeRoadX",1,1,0,0,0],
+["2025-03","DE","WeRoad",439,463,59,57,5363],
+["2025-03","DE","WeRoadX",20,20,0,0,0],
+["2025-03","ES","WeRoad",490,559,44,43,3957],
+["2025-03","ES","WeRoadX",122,135,0,0,0],
+["2025-03","FR","WeRoad",349,363,29,28,2612],
+["2025-03","FR","WeRoadX",47,47,0,0,0],
+["2025-03","IT","WeRoad",3089,3561,476,437,40443],
+["2025-03","IT","WeRoadX",3045,3433,10,7,633],
+["2025-03","WE","WeRoad",344,374,39,37,3319],
+["2025-03","WE","WeRoadX",10,11,0,0,0],
+["2025-04","DE","WeRoad",286,303,38,35,3205],
+["2025-04","DE","WeRoadX",17,18,0,0,0],
+["2025-04","ES","WeRoad",392,442,36,33,3047],
+["2025-04","ES","WeRoadX",104,118,0,0,0],
+["2025-04","FR","WeRoad",239,248,33,33,3047],
+["2025-04","FR","WeRoadX",32,32,0,0,0],
+["2025-04","IT","WeRoad",2672,3120,334,305,28235],
+["2025-04","IT","WeRoadX",2444,2736,5,4,376],
+["2025-04","WE","WeRoad",257,276,19,19,1674],
+["2025-04","WE","WeRoadX",11,11,0,0,0],
+["2025-05","DE","WeRoad",477,500,60,60,5440],
+["2025-05","DE","WeRoadX",32,34,0,0,0],
+["2025-05","ES","WeRoad",646,709,60,59,5401],
+["2025-05","ES","WeRoadX",138,149,0,0,0],
+["2025-05","FR","WeRoad",411,423,45,43,3818],
+["2025-05","FR","WeRoadX",42,42,0,0,0],
+["2025-05","IT","WeRoad",4077,4730,455,412,39088],
+["2025-05","IT","WeRoadX",2767,3050,11,10,810],
+["2025-05","WE","WeRoad",275,296,19,17,1596],
+["2025-05","WE","WeRoadX",12,13,0,0,0],
+["2025-06","DE","WeRoad",459,485,52,49,4511],
+["2025-06","DE","WeRoadX",41,44,0,0,0],
+["2025-06","ES","WeRoad",700,763,61,59,5481],
+["2025-06","ES","WeRoadX",118,130,0,0,0],
+["2025-06","FR","WeRoad",522,552,95,94,5915],
+["2025-06","FR","WeRoadX",64,65,0,0,0],
+["2025-06","IT","WeRoad",4505,5160,558,519,49221],
+["2025-06","IT","WeRoadX",2909,3151,12,12,948],
+["2025-06","WE","WeRoad",321,340,31,30,2703],
+["2025-06","WE","WeRoadX",20,20,0,0,0],
+["2025-07","DE","WeRoad",728,758,93,89,8231],
+["2025-07","DE","WeRoadX",75,77,0,0,0],
+["2025-07","ES","WeRoad",973,1045,66,61,5519],
+["2025-07","ES","WeRoadX",168,185,0,0,0],
+["2025-07","FR","WeRoad",725,756,98,97,8463],
+["2025-07","FR","WeRoadX",128,130,0,0,0],
+["2025-07","IT","WeRoad",5512,6063,651,627,59033],
+["2025-07","IT","WeRoadX",3285,3573,11,11,929],
+["2025-07","WE","WeRoad",422,438,32,32,2901],
+["2025-07","WE","WeRoadX",34,36,1,1,80],
+["2025-08","DE","WeRoad",650,680,75,75,6885],
+["2025-08","DE","WeRoadX",95,95,0,0,0],
+["2025-08","ES","WeRoad",503,533,41,40,3600],
+["2025-08","ES","WeRoadX",179,189,0,0,0],
+["2025-08","FR","WeRoad",457,471,63,62,5478],
+["2025-08","FR","WeRoadX",76,80,0,0,0],
+["2025-08","IT","WeRoad",2643,2914,282,260,24000],
+["2025-08","IT","WeRoadX",2322,2530,2,2,158],
+["2025-08","WE","WeRoad",404,435,38,38,3404],
+["2025-08","WE","WeRoadX",60,61,0,0,0],
+["2025-09","DE","WeRoad",717,761,79,77,7263],
+["2025-09","DE","WeRoadX",112,115,0,0,0],
+["2025-09","ES","WeRoad",391,420,27,27,2493],
+["2025-09","ES","WeRoadX",235,254,0,0,0],
+["2025-09","FR","WeRoad",412,428,45,42,3978],
+["2025-09","FR","WeRoadX",69,71,0,0,0],
+["2025-09","IT","WeRoad",2601,3108,272,241,22639],
+["2025-09","IT","WeRoadX",2112,2333,3,3,297],
+["2025-09","WE","WeRoad",409,448,35,32,2885],
+["2025-09","WE","WeRoadX",71,71,1,1,99],
+["2025-10","DE","WeRoad",490,520,72,72,6708],
+["2025-10","DE","WeRoadX",90,95,0,0,0],
+["2025-10","ES","WeRoad",259,282,20,20,1880],
+["2025-10","ES","WeRoadX",240,259,1,1,99],
+["2025-10","FR","WeRoad",239,254,30,29,2731],
+["2025-10","FR","WeRoadX",93,97,0,0,0],
+["2025-10","IT","WeRoad",1938,2182,202,189,17491],
+["2025-10","IT","WeRoadX",1971,2201,3,3,277],
+["2025-10","WE","WeRoad",304,317,33,33,3041],
+["2025-10","WE","WeRoadX",60,61,2,2,190],
+["2025-11","DE","WeRoad",1276,1403,157,147,13953],
+["2025-11","DE","WeRoadX",274,291,1,1,79],
+["2025-11","ES","WeRoad",517,570,56,50,4670],
+["2025-11","ES","WeRoadX",351,372,0,0,0],
+["2025-11","FR","WeRoad",571,597,68,67,6413],
+["2025-11","FR","WeRoadX",147,149,0,0,0],
+["2025-11","IT","WeRoad",3272,3829,363,327,30253],
+["2025-11","IT","WeRoadX",2975,3292,9,8,732],
+["2025-11","WE","WeRoad",579,622,64,60,5515],
+["2025-11","WE","WeRoadX",161,169,2,2,198],
+["2025-12","DE","WeRoad",683,736,76,72,6828],
+["2025-12","DE","WeRoadX",209,220,0,0,0],
+["2025-12","ES","WeRoad",352,386,32,30,2790],
+["2025-12","ES","WeRoadX",255,269,0,0,0],
+["2025-12","FR","WeRoad",407,428,53,50,4670],
+["2025-12","FR","WeRoadX",142,145,0,0,0],
+["2025-12","IT","WeRoad",2753,3118,306,283,26417],
+["2025-12","IT","WeRoadX",2723,2951,5,5,435],
+["2025-12","WE","WeRoad",366,398,32,32,2925],
+["2025-12","WE","WeRoadX",109,114,3,3,279],
+["2026-01","DE","WeRoad",959,1026,126,123,11637],
+["2026-01","DE","WeRoadX",334,358,2,1,79],
+["2026-01","ES","WeRoad",572,640,48,46,4234],
+["2026-01","ES","WeRoadX",261,285,1,1,79],
+["2026-01","FR","WeRoad",589,619,70,68,6432],
+["2026-01","FR","WeRoadX",205,206,1,1,79],
+["2026-01","IT","WeRoad",3261,3859,359,319,30261],
+["2026-01","IT","WeRoadX",3663,4073,16,15,1385],
+["2026-01","WE","WeRoad",403,450,53,48,4353],
+["2026-01","WE","WeRoadX",174,182,1,1,91],
+["2026-02","DE","WeRoad",557,603,66,63,5777],
+["2026-02","DE","WeRoadX",202,214,0,0,0],
+["2026-02","ES","WeRoad",411,465,41,38,3522],
+["2026-02","ES","WeRoadX",179,190,0,0,0],
+["2026-02","FR","WeRoad",382,398,50,48,4432],
+["2026-02","FR","WeRoadX",110,118,0,0,0],
+["2026-02","IT","WeRoad",2318,2742,259,227,21513],
+["2026-02","IT","WeRoadX",2334,2569,14,14,1386],
+["2026-02","WE","WeRoad",238,273,24,24,2151],
+["2026-02","WE","WeRoadX",126,129,1,1,91],
+];
+// SUPPLY: [year, dep_month, market, cc, total_tours, tours_with_cnc(all), tours_with_ns]
+// tours_with_cnc = total_tours (100% have priceCnc>0, confirmed by BQ)
+const SP = [
+[2025,"2025-01","DE","WeRoad",21,21,7],[2025,"2025-01","ES","WeRoad",19,19,3],[2025,"2025-01","ES","WeRoadX",6,6,0],
+[2025,"2025-01","FR","WeRoad",16,16,4],[2025,"2025-01","IT","WeRoad",109,109,16],[2025,"2025-01","IT","WeRoadX",92,92,0],
+[2025,"2025-01","WE","WeRoad",24,24,10],[2025,"2025-01","WE","WeRoadX",1,1,0],
+[2025,"2025-02","DE","WeRoad",33,33,12],[2025,"2025-02","ES","WeRoad",19,19,4],[2025,"2025-02","ES","WeRoadX",9,9,0],
+[2025,"2025-02","FR","WeRoad",23,23,4],[2025,"2025-02","FR","WeRoadX",1,1,0],[2025,"2025-02","IT","WeRoad",118,118,21],
+[2025,"2025-02","IT","WeRoadX",97,97,0],[2025,"2025-02","WE","WeRoad",23,23,11],
+[2025,"2025-03","DE","WeRoad",53,53,22],[2025,"2025-03","DE","WeRoadX",1,1,0],[2025,"2025-03","ES","WeRoad",21,21,6],
+[2025,"2025-03","ES","WeRoadX",9,9,0],[2025,"2025-03","FR","WeRoad",29,29,10],[2025,"2025-03","IT","WeRoad",144,144,23],
+[2025,"2025-03","IT","WeRoadX",134,134,0],[2025,"2025-03","WE","WeRoad",40,40,12],
+[2025,"2025-04","DE","WeRoad",49,49,15],[2025,"2025-04","DE","WeRoadX",3,3,0],[2025,"2025-04","ES","WeRoad",41,41,9],
+[2025,"2025-04","ES","WeRoadX",18,18,0],[2025,"2025-04","FR","WeRoad",22,22,8],[2025,"2025-04","FR","WeRoadX",6,6,0],
+[2025,"2025-04","IT","WeRoad",339,339,65],[2025,"2025-04","IT","WeRoadX",312,312,2],[2025,"2025-04","WE","WeRoad",38,38,21],
+[2025,"2025-04","WE","WeRoadX",1,1,0],
+[2025,"2025-05","DE","WeRoad",46,46,16],[2025,"2025-05","DE","WeRoadX",2,2,0],[2025,"2025-05","ES","WeRoad",17,17,7],
+[2025,"2025-05","ES","WeRoadX",6,6,0],[2025,"2025-05","FR","WeRoad",40,40,15],[2025,"2025-05","FR","WeRoadX",4,4,0],
+[2025,"2025-05","IT","WeRoad",139,139,29],[2025,"2025-05","IT","WeRoadX",159,159,5],[2025,"2025-05","WE","WeRoad",36,36,26],
+[2025,"2025-05","WE","WeRoadX",1,1,0],
+[2025,"2025-06","DE","WeRoad",41,41,13],[2025,"2025-06","DE","WeRoadX",3,3,0],[2025,"2025-06","ES","WeRoad",27,27,4],
+[2025,"2025-06","ES","WeRoadX",7,7,0],[2025,"2025-06","FR","WeRoad",15,15,6],[2025,"2025-06","FR","WeRoadX",4,4,0],
+[2025,"2025-06","IT","WeRoad",114,114,18],[2025,"2025-06","IT","WeRoadX",134,134,3],[2025,"2025-06","WE","WeRoad",25,25,10],
+[2025,"2025-06","WE","WeRoadX",3,3,0],
+[2025,"2025-07","DE","WeRoad",49,49,18],[2025,"2025-07","DE","WeRoadX",2,2,0],[2025,"2025-07","ES","WeRoad",101,101,30],
+[2025,"2025-07","ES","WeRoadX",11,11,1],[2025,"2025-07","FR","WeRoad",41,41,9],[2025,"2025-07","FR","WeRoadX",5,5,1],
+[2025,"2025-07","IT","WeRoad",324,324,57],[2025,"2025-07","IT","WeRoadX",247,247,10],[2025,"2025-07","WE","WeRoad",32,32,16],
+[2025,"2025-07","WE","WeRoadX",2,2,1],
+[2025,"2025-08","DE","WeRoad",65,65,17],[2025,"2025-08","DE","WeRoadX",6,6,1],[2025,"2025-08","ES","WeRoad",159,159,41],
+[2025,"2025-08","ES","WeRoadX",25,25,3],[2025,"2025-08","FR","WeRoad",87,87,28],[2025,"2025-08","FR","WeRoadX",13,13,2],
+[2025,"2025-08","IT","WeRoad",1248,1248,250],[2025,"2025-08","IT","WeRoadX",570,570,23],[2025,"2025-08","WE","WeRoad",44,44,24],
+[2025,"2025-08","WE","WeRoadX",2,2,1],
+[2025,"2025-09","DE","WeRoad",97,97,41],[2025,"2025-09","DE","WeRoadX",6,6,0],[2025,"2025-09","ES","WeRoad",85,85,22],
+[2025,"2025-09","ES","WeRoadX",12,12,0],[2025,"2025-09","FR","WeRoad",71,71,21],[2025,"2025-09","FR","WeRoadX",6,6,0],
+[2025,"2025-09","IT","WeRoad",302,302,38],[2025,"2025-09","IT","WeRoadX",187,187,5],[2025,"2025-09","WE","WeRoad",61,61,34],
+[2025,"2025-09","WE","WeRoadX",2,2,2],
+[2025,"2025-10","DE","WeRoad",65,65,28],[2025,"2025-10","DE","WeRoadX",9,9,1],[2025,"2025-10","ES","WeRoad",27,27,1],
+[2025,"2025-10","ES","WeRoadX",21,21,2],[2025,"2025-10","FR","WeRoad",28,28,7],[2025,"2025-10","FR","WeRoadX",4,4,0],
+[2025,"2025-10","IT","WeRoad",144,144,25],[2025,"2025-10","IT","WeRoadX",176,176,9],[2025,"2025-10","WE","WeRoad",35,35,20],
+[2025,"2025-10","WE","WeRoadX",3,3,1],
+[2025,"2025-11","DE","WeRoad",65,65,35],[2025,"2025-11","DE","WeRoadX",5,5,1],[2025,"2025-11","ES","WeRoad",41,41,11],
+[2025,"2025-11","ES","WeRoadX",19,19,4],[2025,"2025-11","FR","WeRoad",33,33,5],[2025,"2025-11","FR","WeRoadX",7,7,1],
+[2025,"2025-11","IT","WeRoad",125,125,26],[2025,"2025-11","IT","WeRoadX",129,129,3],[2025,"2025-11","WE","WeRoad",30,30,18],
+[2025,"2025-11","WE","WeRoadX",8,8,3],
+[2025,"2025-12","DE","WeRoad",80,80,33],[2025,"2025-12","DE","WeRoadX",19,19,0],[2025,"2025-12","ES","WeRoad",41,41,13],
+[2025,"2025-12","ES","WeRoadX",54,54,5],[2025,"2025-12","FR","WeRoad",39,39,9],[2025,"2025-12","FR","WeRoadX",18,18,3],
+[2025,"2025-12","IT","WeRoad",340,340,55],[2025,"2025-12","IT","WeRoadX",404,404,26],[2025,"2025-12","WE","WeRoad",41,41,24],
+[2025,"2025-12","WE","WeRoadX",11,11,2],
+[2026,"2026-01","DE","WeRoad",29,29,11],[2026,"2026-01","DE","WeRoadX",7,7,1],[2026,"2026-01","ES","WeRoad",20,20,5],
+[2026,"2026-01","ES","WeRoadX",14,14,0],[2026,"2026-01","FR","WeRoad",16,16,3],[2026,"2026-01","FR","WeRoadX",6,6,3],
+[2026,"2026-01","IT","WeRoad",148,148,24],[2026,"2026-01","IT","WeRoadX",129,129,3],[2026,"2026-01","WE","WeRoad",23,23,14],
+[2026,"2026-01","WE","WeRoadX",2,2,0],
+[2026,"2026-02","DE","WeRoad",73,73,22],[2026,"2026-02","DE","WeRoadX",49,49,2],[2026,"2026-02","ES","WeRoad",37,37,5],
+[2026,"2026-02","ES","WeRoadX",69,69,0],[2026,"2026-02","FR","WeRoad",49,49,6],[2026,"2026-02","FR","WeRoadX",49,49,2],
+[2026,"2026-02","IT","WeRoad",189,189,12],[2026,"2026-02","IT","WeRoadX",307,307,7],[2026,"2026-02","WE","WeRoad",39,39,12],
+[2026,"2026-02","WE","WeRoadX",35,35,4],
+[2026,"2026-03","DE","WeRoad",108,108,24],[2026,"2026-03","DE","WeRoadX",87,87,2],[2026,"2026-03","ES","WeRoad",83,83,9],
+[2026,"2026-03","ES","WeRoadX",125,125,2],[2026,"2026-03","FR","WeRoad",79,79,8],[2026,"2026-03","FR","WeRoadX",68,68,3],
+[2026,"2026-03","IT","WeRoad",289,289,16],[2026,"2026-03","IT","WeRoadX",533,533,10],[2026,"2026-03","WE","WeRoad",59,59,24],
+[2026,"2026-03","WE","WeRoadX",47,47,4],
+[2026,"2026-04","DE","WeRoad",133,133,22],[2026,"2026-04","DE","WeRoadX",102,102,0],[2026,"2026-04","ES","WeRoad",105,105,6],
+[2026,"2026-04","ES","WeRoadX",177,177,2],[2026,"2026-04","FR","WeRoad",123,123,9],[2026,"2026-04","FR","WeRoadX",111,111,2],
+[2026,"2026-04","IT","WeRoad",431,431,28],[2026,"2026-04","IT","WeRoadX",882,882,10],[2026,"2026-04","WE","WeRoad",57,57,16],
+[2026,"2026-04","WE","WeRoadX",68,68,3],
+[2026,"2026-05","DE","WeRoad",136,136,16],[2026,"2026-05","DE","WeRoadX",116,116,4],[2026,"2026-05","ES","WeRoad",91,91,3],
+[2026,"2026-05","ES","WeRoadX",159,159,0],[2026,"2026-05","FR","WeRoad",144,144,8],[2026,"2026-05","FR","WeRoadX",129,129,0],
+[2026,"2026-05","IT","WeRoad",287,287,9],[2026,"2026-05","IT","WeRoadX",726,726,4],[2026,"2026-05","WE","WeRoad",80,80,17],
+[2026,"2026-05","WE","WeRoadX",82,82,6],
+[2026,"2026-06","DE","WeRoad",101,101,12],[2026,"2026-06","DE","WeRoadX",102,102,1],[2026,"2026-06","ES","WeRoad",82,82,0],
+[2026,"2026-06","ES","WeRoadX",134,134,0],[2026,"2026-06","FR","WeRoad",90,90,3],[2026,"2026-06","FR","WeRoadX",81,81,0],
+[2026,"2026-06","IT","WeRoad",263,263,5],[2026,"2026-06","IT","WeRoadX",599,599,2],[2026,"2026-06","WE","WeRoad",55,55,9],
+[2026,"2026-06","WE","WeRoadX",60,60,3],
+[2026,"2026-07","DE","WeRoad",130,130,4],[2026,"2026-07","DE","WeRoadX",118,118,2],[2026,"2026-07","ES","WeRoad",161,161,5],
+[2026,"2026-07","ES","WeRoadX",169,169,0],[2026,"2026-07","FR","WeRoad",140,140,3],[2026,"2026-07","FR","WeRoadX",111,111,0],
+[2026,"2026-07","IT","WeRoad",535,535,5],[2026,"2026-07","IT","WeRoadX",828,828,1],[2026,"2026-07","WE","WeRoad",69,69,2],
+[2026,"2026-07","WE","WeRoadX",76,76,1],
+[2026,"2026-08","DE","WeRoad",159,159,7],[2026,"2026-08","DE","WeRoadX",139,139,2],[2026,"2026-08","ES","WeRoad",265,265,2],
+[2026,"2026-08","ES","WeRoadX",204,204,0],[2026,"2026-08","FR","WeRoad",181,181,6],[2026,"2026-08","FR","WeRoadX",133,133,0],
+[2026,"2026-08","IT","WeRoad",1425,1425,31],[2026,"2026-08","IT","WeRoadX",1235,1235,6],[2026,"2026-08","WE","WeRoad",101,101,2],
+[2026,"2026-08","WE","WeRoadX",84,84,2],
+[2026,"2026-09","DE","WeRoad",156,156,7],[2026,"2026-09","DE","WeRoadX",106,106,3],[2026,"2026-09","ES","WeRoad",137,137,1],
+[2026,"2026-09","ES","WeRoadX",124,124,0],[2026,"2026-09","FR","WeRoad",116,116,2],[2026,"2026-09","FR","WeRoadX",74,74,0],
+[2026,"2026-09","IT","WeRoad",414,414,5],[2026,"2026-09","IT","WeRoadX",542,542,0],[2026,"2026-09","WE","WeRoad",92,92,9],
+[2026,"2026-09","WE","WeRoadX",52,52,1],
+[2026,"2026-10","DE","WeRoad",109,109,5],[2026,"2026-10","DE","WeRoadX",74,74,0],[2026,"2026-10","ES","WeRoad",75,75,0],
+[2026,"2026-10","ES","WeRoadX",119,119,0],[2026,"2026-10","FR","WeRoad",82,82,1],[2026,"2026-10","FR","WeRoadX",60,60,0],
+[2026,"2026-10","IT","WeRoad",277,277,4],[2026,"2026-10","IT","WeRoadX",374,374,0],[2026,"2026-10","WE","WeRoad",61,61,5],
+[2026,"2026-10","WE","WeRoadX",40,40,2],
+[2026,"2026-11","DE","WeRoad",93,93,10],[2026,"2026-11","DE","WeRoadX",58,58,4],[2026,"2026-11","ES","WeRoad",63,63,0],
+[2026,"2026-11","ES","WeRoadX",61,61,1],[2026,"2026-11","FR","WeRoad",61,61,1],[2026,"2026-11","FR","WeRoadX",37,37,0],
+[2026,"2026-11","IT","WeRoad",205,205,2],[2026,"2026-11","IT","WeRoadX",214,214,0],[2026,"2026-11","WE","WeRoad",54,54,5],
+[2026,"2026-11","WE","WeRoadX",31,31,0],
+[2026,"2026-12","DE","WeRoad",118,118,1],[2026,"2026-12","DE","WeRoadX",73,73,0],[2026,"2026-12","ES","WeRoad",124,124,1],
+[2026,"2026-12","ES","WeRoadX",127,127,0],[2026,"2026-12","FR","WeRoad",96,96,1],[2026,"2026-12","FR","WeRoadX",65,65,0],
+[2026,"2026-12","IT","WeRoad",420,420,4],[2026,"2026-12","IT","WeRoadX",433,433,0],[2026,"2026-12","WE","WeRoad",69,69,1],
+[2026,"2026-12","WE","WeRoadX",56,56,2],
+];
+
+// ============================================================
+// CONSTANTS
+// ============================================================
+const MKT = ['IT','DE','ES','FR','WE'];
+const MC = {IT:'#ff6b35',DE:'#00d4aa',ES:'#7b68ee',FR:'#ffd700',WE:'#ff69b4'};
+const MONTHS = ['2025-01','2025-02','2025-03','2025-04','2025-05','2025-06',
+                '2025-07','2025-08','2025-09','2025-10','2025-11','2025-12',
+                '2026-01','2026-02'];
+const ML = m => {const [y,mo]=m.split('-');const mn=['','Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];return mn[+mo]+(y==='2026'?' 26':' 25');};
+const DEP_MONTHS_25 = ['2025-01','2025-02','2025-03','2025-04','2025-05','2025-06','2025-07','2025-08','2025-09','2025-10','2025-11','2025-12'];
+const DEP_MONTHS_26 = ['2026-01','2026-02','2026-03','2026-04','2026-05','2026-06','2026-07','2026-08','2026-09','2026-10','2026-11','2026-12'];
+const ALL_DEP = [...DEP_MONTHS_25,...DEP_MONTHS_26];
+
+let fMkt='ALL', fCC='ALL';
+
+// ============================================================
+// FILTER HELPERS
+// ============================================================
+function fbk(rows){return rows.filter(r=>(fMkt==='ALL'||r[1]===fMkt)&&(fCC==='ALL'||r[2]===fCC));}
+function fsp(rows){return rows.filter(r=>(fMkt==='ALL'||r[2]===fMkt)&&(fCC==='ALL'||r[3]===fCC));}
+function pct(a,b){return b>0?a/b*100:0;}
+function fmt1(v){return v.toFixed(1)+'%';}
+function fmtK(v){return v>=1000?(v/1000).toFixed(1)+'K':v.toFixed(0);}
+
+// ============================================================
+// HEATMAP COLOR — cancellation option
+// ============================================================
+function cCell(p){
+  if(p===0)return 'c0';
+  if(p<5)return 'c1';
+  if(p<10)return 'c2';
+  if(p<15)return 'c3';
+  return 'c4';
+}
+function nsCell(p){
+  if(p===0)return 'c0';
+  if(p<15)return 'cg1';
+  if(p<30)return 'cg2';
+  return 'cg3';
+}
+
+// ============================================================
+// CANCELLATION OPTION — KPIs
+// ============================================================
+function renderCancKPIs(){
+  const rows=fbk(BK);
+  const sum=(ms)=>{let pax=0,cp=0,rev=0;rows.filter(r=>ms.includes(r[0])).forEach(r=>{pax+=r[4];cp+=r[5];rev+=r[7];});return{pax,cp,rev};};
+  const y25=sum(MONTHS.filter(m=>m.startsWith('2025')));
+  const y26=sum(MONTHS.filter(m=>m.startsWith('2026')));
+  const jf25=sum(['2025-01','2025-02']);
+  const jf26=sum(['2026-01','2026-02']);
+  const r25=pct(jf25.cp,jf25.pax), r26=pct(jf26.cp,jf26.pax);
+  const diff=(r26-r25);
+  const cls=diff>=0?'up':'dn';
+  const wrxRows=rows.filter(r=>r[2]==='WeRoadX');
+  const wrRows=rows.filter(r=>r[2]==='WeRoad');
+  const wrxRate=pct(wrxRows.reduce((s,r)=>s+r[5],0),wrxRows.reduce((s,r)=>s+r[4],0));
+  const wrRate=pct(wrRows.reduce((s,r)=>s+r[5],0),wrRows.reduce((s,r)=>s+r[4],0));
+  document.getElementById('canc-kpis').innerHTML=`
+    <div class="kpi ora"><div class="lbl">2025 Full-Year Take-Rate</div><div class="val">${fmt1(pct(y25.cp,y25.pax))}</div><div class="sub">${y25.cp.toLocaleString()} canc PAX of ${fmtK(y25.pax)}</div></div>
+    <div class="kpi ora"><div class="lbl">Jan–Feb 25 Take-Rate</div><div class="val">${fmt1(r25)}</div><div class="sub">${jf25.cp.toLocaleString()} PAX of ${jf25.pax.toLocaleString()}</div></div>
+    <div class="kpi ora"><div class="lbl">Jan–Feb 26 Take-Rate</div><div class="val">${fmt1(r26)}</div><div class="yoy ${cls}">${diff>=0?'+':''}${diff.toFixed(1)}pp YoY</div><div class="sub">${jf26.cp.toLocaleString()} PAX of ${jf26.pax.toLocaleString()}</div></div>
+    <div class="kpi grn"><div class="lbl">WeRoad Take-Rate</div><div class="val">${fmt1(wrRate)}</div><div class="sub">across all months</div></div>
+    <div class="kpi pur"><div class="lbl">WeRoadX Take-Rate</div><div class="val">${fmt1(wrxRate)}</div><div class="sub" style="color:var(--neg)">~${Math.round(wrRate/Math.max(wrxRate,0.01))}× lower than WeRoad</div></div>`;
+  document.getElementById('canc-alert').innerHTML=`Key finding: The cancellation option is almost entirely a <strong>WeRoad</strong> product. WeRoadX take-rate = ${fmt1(wrxRate)} vs ${fmt1(wrRate)} for WeRoad across the full period. Jan–Feb 2026 overall rate = ${fmt1(r26)} vs ${fmt1(r25)} same period 2025 (${diff>=0?'+':''}${diff.toFixed(1)}pp). The option appears available on all tours (priceCnc > 0 everywhere) — the gap is demand/placement, not supply.`;
+}
+
+// ============================================================
+// CANCELLATION HEATMAP — booking month × market×CC
+// ============================================================
+function renderCancHM(){
+  const combos=[];
+  MKT.forEach(m=>{if(fMkt!=='ALL'&&m!==fMkt)return;['WeRoad','WeRoadX'].forEach(cc=>{if(fCC!=='ALL'&&cc!==fCC)return;combos.push({m,cc});});});
+  const lw=105, cw=54, gap=3, ch=28;
+  const cols=MONTHS.length;
+  let html=`<div class="hm-scroll"><div style="display:grid;grid-template-columns:${lw}px repeat(${cols},${cw}px);gap:${gap}px;margin-bottom:${gap}px">`;
+  html+=`<div></div>`;
+  MONTHS.forEach(mo=>{html+=`<div class="hm-hdr" style="${mo.startsWith('2026')?'color:var(--accent)':''}">${ML(mo)}</div>`;});
+  html+='</div>';
+  combos.forEach(({m,cc})=>{
+    html+=`<div style="display:grid;grid-template-columns:${lw}px repeat(${cols},${cw}px);gap:${gap}px;margin-bottom:${gap}px">`;
+    const ccColor=cc==='WeRoad'?'var(--accent)':'var(--accent2)';
+    html+=`<div class="hm-lbl"><span style="color:${MC[m]}">${m}</span> <span style="color:${ccColor};font-size:9px">${cc==='WeRoad'?'WR':'WRX'}</span></div>`;
+    MONTHS.forEach(mo=>{
+      const row=BK.find(r=>r[0]===mo&&r[1]===m&&r[2]===cc);
+      const p=row&&row[4]>0?pct(row[5],row[4]):0;
+      const cls=cCell(p);
+      const lbl=row&&row[4]>0?(p>0?p.toFixed(1)+'%':'0%'):'—';
+      const tip=row?`${m} ${cc} ${ML(mo)}: ${p.toFixed(2)}% (${row[5]}/${row[4]} PAX)`:'no data';
+      html+=`<div class="cell ${cls}" title="${tip}">${lbl}</div>`;
+    });
+    html+='</div>';
+  });
+  html+='</div>';
+  document.getElementById('canc-hm').innerHTML=html;
+}
+
+// ============================================================
+// CANCELLATION TABLE — summary by market+CC
+// ============================================================
+function cancTable(months, elId){
+  const rows=fbk(BK).filter(r=>months.includes(r[0]));
+  const agg={};
+  rows.forEach(r=>{const k=r[1]+'|'+r[2];if(!agg[k])agg[k]={mkt:r[1],cc:r[2],bkgs:0,pax:0,cp:0,rev:0};agg[k].bkgs+=r[3];agg[k].pax+=r[4];agg[k].cp+=r[5];agg[k].rev+=r[7];});
+  const sorted=Object.values(agg).sort((a,b)=>pct(b.cp,b.pax)-pct(a.cp,a.pax));
+  const maxRate=Math.max(...sorted.map(r=>pct(r.cp,r.pax)));
+  let html=`<table class="dt"><thead><tr><th>Market</th><th>CC</th><th class="r">PAX</th><th class="r">Canc PAX</th><th class="r">Take-Rate</th><th class="r">Revenue</th></tr></thead><tbody>`;
+  sorted.forEach(r=>{
+    const rate=pct(r.cp,r.pax);
+    const rateC=rate>12?'var(--pos)':rate>7?'var(--accent)':rate>2?'var(--text)':'var(--muted)';
+    const ccC=r.cc==='WeRoad'?'var(--accent)':'var(--accent2)';
+    const barPct=maxRate>0?rate/maxRate*100:0;
+    html+=`<tr>
+      <td style="color:${MC[r.mkt]};font-weight:500">${r.mkt}</td>
+      <td style="color:${ccC};font-size:10px">${r.cc}</td>
+      <td class="r">${r.pax.toLocaleString()}</td>
+      <td class="r">${r.cp.toLocaleString()}</td>
+      <td class="r"><div class="ibw"><div class="ib"><div class="ibf" style="width:${barPct}%;background:${rateC}"></div></div><span class="pc" style="color:${rateC}">${fmt1(rate)}</span></div></td>
+      <td class="r" style="color:var(--muted)">€${(r.rev/1000).toFixed(1)}K</td>
+    </tr>`;
+  });
+  html+='</tbody></table>';
+  document.getElementById(elId).innerHTML=html;
+}
+
+// ============================================================
+// CANCELLATION TREND CHART
+// ============================================================
+function renderCancTrend(){
+  const rows=fbk(BK);
+  const wrR={},wrxR={},totR={};
+  MONTHS.forEach(mo=>{
+    const wr=rows.filter(r=>r[0]===mo&&r[2]==='WeRoad');
+    const wrx=rows.filter(r=>r[0]===mo&&r[2]==='WeRoadX');
+    const tot=rows.filter(r=>r[0]===mo);
+    const wrPax=wr.reduce((s,r)=>s+r[4],0),wrCP=wr.reduce((s,r)=>s+r[5],0);
+    const wrxPax=wrx.reduce((s,r)=>s+r[4],0),wrxCP=wrx.reduce((s,r)=>s+r[5],0);
+    const tPax=tot.reduce((s,r)=>s+r[4],0),tCP=tot.reduce((s,r)=>s+r[5],0);
+    wrR[mo]=pct(wrCP,wrPax); wrxR[mo]=pct(wrxCP,wrxPax); totR[mo]=pct(tCP,tPax);
+  });
+  const maxV=Math.max(...Object.values(wrR),...Object.values(wrxR))*1.2||20;
+  const W=900,H=200,PL=48,PR=12,PT=14,PB=30;
+  const cW=W-PL-PR,cH=H-PT-PB,bw=cW/MONTHS.length;
+  let svg='';
+  // gridlines
+  [0,.25,.5,.75,1].forEach(t=>{
+    const y=PT+cH-t*cH,v=(maxV*t).toFixed(0);
+    svg+=`<line x1="${PL}" y1="${y}" x2="${W-PR}" y2="${y}" stroke="#252a38" stroke-width="1"/>`;
+    svg+=`<text x="${PL-5}" y="${y+4}" text-anchor="end" fill="#6b7490" font-size="9">${v}%</text>`;
+  });
+  // 2026 boundary
+  const sepX=PL+12*bw;
+  svg+=`<line x1="${sepX}" y1="${PT}" x2="${sepX}" y2="${PT+cH}" stroke="#ff6b35" stroke-width="1" stroke-dasharray="4,3" opacity="0.6"/>`;
+  svg+=`<text x="${sepX+3}" y="${PT+10}" fill="#ff6b35" font-size="9">2026</text>`;
+  // bars
+  MONTHS.forEach((mo,i)=>{
+    const x=PL+i*bw+bw*.06, bwi=bw*.28;
+    const hWR=(wrR[mo]/maxV)*cH, hWRX=(wrxR[mo]/maxV)*cH, hTot=(totR[mo]/maxV)*cH;
+    svg+=`<rect x="${x}" y="${PT+cH-hWR}" width="${bwi}" height="${hWR}" fill="var(--accent)" rx="2" opacity="0.85"/>`;
+    svg+=`<rect x="${x+bwi+2}" y="${PT+cH-hWRX}" width="${bwi}" height="${hWRX}" fill="var(--accent2)" rx="2" opacity="0.7"/>`;
+    // total line dot
+    if(totR[mo]>0){const dy=PT+cH-hTot;svg+=`<circle cx="${PL+(i+0.5)*bw}" cy="${dy}" r="3" fill="var(--accent3)"/>`;if(i>0){const pmo=MONTHS[i-1];const pdy=PT+cH-(totR[pmo]/maxV)*cH;svg+=`<line x1="${PL+(i-.5)*bw}" y1="${pdy}" x2="${PL+(i+.5)*bw}" y2="${dy}" stroke="var(--accent3)" stroke-width="1.5" opacity="0.6"/>`;}}
+    svg+=`<text x="${PL+(i+.5)*bw}" y="${H-6}" text-anchor="middle" fill="#6b7490" font-size="8">${ML(mo)}</text>`;
+    if(wrR[mo]>0) svg+=`<text x="${x+bwi/2}" y="${PT+cH-hWR-4}" text-anchor="middle" fill="var(--accent)" font-size="7">${wrR[mo].toFixed(0)}%</text>`;
+  });
+  document.getElementById('canc-trend').innerHTML=`<svg width="100%" viewBox="0 0 ${W} ${H}" style="overflow:visible">${svg}</svg>`;
+}
+
+// ============================================================
+// NOSHARING KPIs
+// ============================================================
+function renderNSKPIs(){
+  const sp25=fsp(SP).filter(r=>r[0]===2025);
+  const sp26=fsp(SP).filter(r=>r[0]===2026);
+  const t25=sp25.reduce((s,r)=>s+r[4],0),ns25=sp25.reduce((s,r)=>s+r[6],0);
+  const t26=sp26.reduce((s,r)=>s+r[4],0),ns26=sp26.reduce((s,r)=>s+r[6],0);
+  const wr25=sp25.filter(r=>r[3]==='WeRoad'),wrx25=sp25.filter(r=>r[3]==='WeRoadX');
+  const nsWR=wr25.reduce((s,r)=>s+r[6],0),tWR=wr25.reduce((s,r)=>s+r[4],0);
+  const nsWRX=wrx25.reduce((s,r)=>s+r[6],0),tWRX=wrx25.reduce((s,r)=>s+r[4],0);
+  document.getElementById('ns-kpis').innerHTML=`
+    <div class="kpi grn"><div class="lbl">2025 Total Tours</div><div class="val">${t25.toLocaleString()}</div><div class="sub">active departures</div></div>
+    <div class="kpi grn"><div class="lbl">2025 Offering NoSharing</div><div class="val">${fmt1(pct(ns25,t25))}</div><div class="sub">${ns25.toLocaleString()} of ${t25.toLocaleString()} tours</div></div>
+    <div class="kpi grn"><div class="lbl">2026 Total Tours</div><div class="val">${t26.toLocaleString()}</div><div class="sub">planned departures</div></div>
+    <div class="kpi grn"><div class="lbl">2026 Offering NoSharing</div><div class="val">${fmt1(pct(ns26,t26))}</div><div class="sub">${ns26.toLocaleString()} of ${t26.toLocaleString()} tours</div></div>
+    <div class="kpi pur"><div class="lbl">WeRoad vs WeRoadX</div><div class="val">${fmt1(pct(nsWR,tWR))}</div><div class="sub" style="color:var(--accent2)">WRX: ${fmt1(pct(nsWRX,tWRX))} (2025)</div></div>`;
+  document.getElementById('ns-alert').innerHTML=`NoSharing is almost exclusively a <strong>WeRoad</strong> product. 2025: WeRoad offers it on ${fmt1(pct(nsWR,tWR))} of tours vs ${fmt1(pct(nsWRX,tWRX))} for WeRoadX. Note: the 2026 figures for future departure months undercount because bookings haven't yet accrued — only tours with an existing booking showing priceNoSharing > 0 are counted as "offering".`;
+}
+
+// ============================================================
+// NOSHARING HEATMAP by departure month
+// ============================================================
+function renderNSHM(){
+  const combos=[];
+  MKT.forEach(m=>{if(fMkt!=='ALL'&&m!==fMkt)return;['WeRoad','WeRoadX'].forEach(cc=>{if(fCC!=='ALL'&&cc!==fCC)return;combos.push({m,cc});});});
+  const allDep=[...DEP_MONTHS_25,...DEP_MONTHS_26];
+  const lw=105, cw=47, gap=3;
+  let html=`<div class="hm-scroll"><div style="display:grid;grid-template-columns:${lw}px repeat(${allDep.length},${cw}px);gap:${gap}px;margin-bottom:${gap}px">`;
+  html+=`<div></div>`;
+  allDep.forEach(mo=>{const isNew=mo.startsWith('2026');const short=ML(mo);html+=`<div class="hm-hdr" style="${isNew?'color:var(--accent)':''}">${short}</div>`;});
+  html+='</div>';
+  combos.forEach(({m,cc})=>{
+    html+=`<div style="display:grid;grid-template-columns:${lw}px repeat(${allDep.length},${cw}px);gap:${gap}px;margin-bottom:${gap}px">`;
+    const ccColor=cc==='WeRoad'?'var(--accent)':'var(--accent2)';
+    html+=`<div class="hm-lbl"><span style="color:${MC[m]}">${m}</span> <span style="color:${ccColor};font-size:9px">${cc==='WeRoad'?'WR':'WRX'}</span></div>`;
+    allDep.forEach(mo=>{
+      const yr=+mo.split('-')[0];
+      const row=SP.find(r=>r[0]===yr&&r[1]===mo&&r[2]===m&&r[3]===cc);
+      const p=row&&row[4]>0?pct(row[6],row[4]):0;
+      const cls=nsCell(p);
+      const lbl=row&&row[4]>0?(p>0?p.toFixed(0)+'%':'0%'):'—';
+      const tip=row?`${m} ${cc} dep ${mo}: ${p.toFixed(1)}% (${row[6]}/${row[4]} tours)`:'no data';
+      html+=`<div class="cell ${cls}" title="${tip}">${lbl}</div>`;
+    });
+    html+='</div>';
+  });
+  html+='</div>';
+  document.getElementById('ns-hm-25').innerHTML=html;
+}
+
+// ============================================================
+// NOSHARING SUMMARY TABLE
+// ============================================================
+function nsTable(year, elId){
+  const rows=fsp(SP).filter(r=>r[0]===year);
+  const agg={};
+  rows.forEach(r=>{const k=r[2]+'|'+r[3];if(!agg[k])agg[k]={mkt:r[2],cc:r[3],tours:0,ns:0};agg[k].tours+=r[4];agg[k].ns+=r[6];});
+  const sorted=Object.values(agg).sort((a,b)=>pct(b.ns,b.tours)-pct(a.ns,a.tours));
+  const maxR=Math.max(...sorted.map(r=>pct(r.ns,r.tours)));
+  let html=`<table class="dt"><thead><tr><th>Market</th><th>CC</th><th class="r">Tours</th><th class="r">Offering NS</th><th class="r">Rate</th></tr></thead><tbody>`;
+  sorted.forEach(r=>{
+    const rate=pct(r.ns,r.tours);
+    const rC=rate>20?'var(--pos)':rate>10?'var(--accent)':rate>3?'var(--text)':'var(--muted)';
+    const barPct=maxR>0?rate/maxR*100:0;
+    html+=`<tr>
+      <td style="color:${MC[r.mkt]};font-weight:500">${r.mkt}</td>
+      <td style="color:${r.cc==='WeRoad'?'var(--accent)':'var(--accent2)'};font-size:10px">${r.cc}</td>
+      <td class="r">${r.tours.toLocaleString()}</td>
+      <td class="r">${r.ns.toLocaleString()}</td>
+      <td class="r"><div class="ibw"><div class="ib"><div class="ibf" style="width:${barPct}%;background:${rC}"></div></div><span class="pc" style="color:${rC}">${fmt1(rate)}</span></div></td>
+    </tr>`;
+  });
+  html+='</tbody></table>';
+  document.getElementById(elId).innerHTML=html;
+}
+
+// ============================================================
+// SUPPLY KPIs + CHARTS
+// ============================================================
+function renderSupKPIs(){
+  const sp25=fsp(SP).filter(r=>r[0]===2025), sp26=fsp(SP).filter(r=>r[0]===2026);
+  const t25=sp25.reduce((s,r)=>s+r[4],0), t26=sp26.reduce((s,r)=>s+r[4],0);
+  const ns25=sp25.reduce((s,r)=>s+r[6],0), ns26=sp26.reduce((s,r)=>s+r[6],0);
+  const delta=(t26-t25)/t25*100;
+  const deltaNS=(pct(ns26,t26)-pct(ns25,t25));
+  document.getElementById('sup-kpis').innerHTML=`
+    <div class="kpi ora"><div class="lbl">Total Tours 2025</div><div class="val">${t25.toLocaleString()}</div><div class="sub">active departures</div></div>
+    <div class="kpi ora"><div class="lbl">Total Tours 2026</div><div class="val">${t26.toLocaleString()}</div><div class="yoy ${delta>=0?'up':'dn'}">${delta>=0?'+':''}${delta.toFixed(1)}% vs 2025</div></div>
+    <div class="kpi grn"><div class="lbl">Canc Option 2025</div><div class="val">100%</div><div class="sub">all tours offer it</div></div>
+    <div class="kpi grn"><div class="lbl">Canc Option 2026</div><div class="val">100%</div><div class="sub">all tours offer it</div></div>
+    <div class="kpi pur"><div class="lbl">NoSharing: 25→26 Δ</div><div class="val">${fmt1(pct(ns25,t25))}</div><div class="yoy ${deltaNS>=0?'up':'dn'}">${deltaNS>=0?'+':''}${deltaNS.toFixed(1)}pp in 2026</div></div>`;
+}
+
+function renderSupBars(){
+  const DM=['01','02','03','04','05','06','07','08','09','10','11','12'];
+  const LB=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const t25=DM.map(d=>fsp(SP).filter(r=>r[0]===2025&&r[1]===`2025-${d}`).reduce((s,r)=>s+r[4],0));
+  const t26=DM.map(d=>fsp(SP).filter(r=>r[0]===2026&&r[1]===`2026-${d}`).reduce((s,r)=>s+r[4],0));
+  const ns25=DM.map(d=>fsp(SP).filter(r=>r[0]===2025&&r[1]===`2025-${d}`).reduce((s,r)=>s+r[6],0));
+  const ns26=DM.map(d=>fsp(SP).filter(r=>r[0]===2026&&r[1]===`2026-${d}`).reduce((s,r)=>s+r[6],0));
+  const nsR25=t25.map((t,i)=>pct(ns25[i],t)); const nsR26=t26.map((t,i)=>pct(ns26[i],t));
+  const doBar=(d25,d26,maxVal,el,fmt,c25,c26)=>{
+    const W=380,H=185,PL=44,PR=10,PT=12,PB=26;
+    const cW=W-PL-PR,cH=H-PT-PB,bw=cW/12;
+    let svg='';
+    [0,.25,.5,.75,1].forEach(t=>{const y=PT+cH-t*cH;svg+=`<line x1="${PL}" y1="${y}" x2="${W-PR}" y2="${y}" stroke="#252a38" stroke-width="1"/>`;svg+=`<text x="${PL-4}" y="${y+4}" text-anchor="end" fill="#6b7490" font-size="9">${fmt(maxVal*t)}</text>`;});
+    DM.forEach((_,i)=>{
+      const x=PL+i*bw+bw*.08, bwi=bw*.38;
+      const h25=maxVal>0?(d25[i]/maxVal)*cH:0, h26=maxVal>0?(d26[i]/maxVal)*cH:0;
+      svg+=`<rect x="${x}" y="${PT+cH-h25}" width="${bwi}" height="${h25}" fill="${c25}" rx="2" opacity="0.6"/>`;
+      svg+=`<rect x="${x+bwi+2}" y="${PT+cH-h26}" width="${bwi}" height="${h26}" fill="${c26}" rx="2"/>`;
+      svg+=`<text x="${PL+(i+.5)*bw}" y="${H-4}" text-anchor="middle" fill="#6b7490" font-size="8">${LB[i]}</text>`;
+    });
+    document.getElementById(el).innerHTML=`<svg width="100%" viewBox="0 0 ${W} ${H}">${svg}</svg>`;
+  };
+  doBar(t25,t26,Math.max(...t25,...t26)*1.15,'sup-bar-tours',v=>fmtK(v),'#555','var(--accent)');
+  doBar(nsR25,nsR26,Math.max(...nsR25,...nsR26,5)*1.2,'sup-bar-ns',v=>v.toFixed(0)+'%','#555','var(--accent2)');
+}
+
+function renderSupTable(){
+  const rows=fsp(SP);
+  const agg={};
+  rows.forEach(r=>{const k=r[2]+'|'+r[3];if(!agg[k])agg[k]={mkt:r[2],cc:r[3],t25:0,ns25:0,t26:0,ns26:0};if(r[0]===2025){agg[k].t25+=r[4];agg[k].ns25+=r[6];}else{agg[k].t26+=r[4];agg[k].ns26+=r[6];}});
+  const sorted=Object.values(agg).sort((a,b)=>(b.t25+b.t26)-(a.t25+a.t26));
+  let html=`<table class="dt"><thead><tr>
+    <th>Market</th><th>CC</th>
+    <th class="r">Tours 2025</th><th class="r">NS 2025</th><th class="r">NS Rate 25</th>
+    <th class="r">Tours 2026</th><th class="r">NS 2026</th><th class="r">NS Rate 26</th>
+    <th class="r">Tour Growth</th>
+  </tr></thead><tbody>`;
+  sorted.forEach(r=>{
+    const r25=pct(r.ns25,r.t25), r26=pct(r.ns26,r.t26);
+    const grow=r.t25>0?(r.t26-r.t25)/r.t25*100:999;
+    const gC=grow>=0?'var(--pos)':'var(--neg)';
+    const nsD=r26-r25, nsDC=nsD>=0?'var(--pos)':'var(--neg)';
+    html+=`<tr>
+      <td style="color:${MC[r.mkt]};font-weight:500">${r.mkt}</td>
+      <td style="color:${r.cc==='WeRoad'?'var(--accent)':'var(--accent2)'};font-size:10px">${r.cc}</td>
+      <td class="r">${r.t25.toLocaleString()}</td>
+      <td class="r">${r.ns25.toLocaleString()}</td>
+      <td class="r" style="color:var(--muted)">${fmt1(r25)}</td>
+      <td class="r">${r.t26.toLocaleString()}</td>
+      <td class="r">${r.ns26.toLocaleString()}</td>
+      <td class="r" style="color:${nsDC}">${fmt1(r26)} <span style="font-size:9px">(${nsD>=0?'+':''}${nsD.toFixed(1)}pp)</span></td>
+      <td class="r" style="color:${gC}">${grow>=0?'+':''}${grow.toFixed(0)}%</td>
+    </tr>`;
+  });
+  html+='</tbody></table>';
+  document.getElementById('sup-table').innerHTML=html;
+}
+
+// ============================================================
+// RENDER ALL
+// ============================================================
+function renderAll(){
+  renderCancKPIs();
+  renderCancHM();
+  cancTable(['2025-01','2025-02'],'canc-t25');
+  cancTable(['2026-01','2026-02'],'canc-t26');
+  cancTable(MONTHS.filter(m=>m.startsWith('2025')),'canc-t25full');
+  renderCancTrend();
+  renderNSKPIs();
+  renderNSHM();
+  nsTable(2025,'ns-t25');
+  nsTable(2026,'ns-t26');
+  renderSupKPIs();
+  renderSupBars();
+  renderSupTable();
+}
+
+// ============================================================
+// CONTROLS
+// ============================================================
+function tab(id, el){
+  document.querySelectorAll('.pane').forEach(p=>p.classList.remove('on'));
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('on'));
+  document.getElementById('pane-'+id).classList.add('on');
+  el.classList.add('on');
+}
+function flt(type, val, el){
+  if(type==='mkt') fMkt=val; else fCC=val;
+  el.parentElement.querySelectorAll('.p').forEach(p=>p.classList.remove('on'));
+  el.classList.add('on');
+  renderAll();
+}
+
+renderAll();
+</script>
+</body>
+</html>
